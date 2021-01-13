@@ -4,34 +4,16 @@
 
 #ifndef EMBEDDER_TIZEN_WINDOW_H_
 #define EMBEDDER_TIZEN_WINDOW_H_
-#include <EGL/egl.h>
-#define EFL_BETA_API_SUPPORT
-#include <Ecore_Wl2.h>
 
+#undef EFL_BETA_API_SUPPORT
+// #ifndef EFL_BETA_API_SUPPORT
+// #define EFL_BETA_API_SUPPORT
+// #endif
+#include <Elementary.h>
+#include <Evas_GL.h>
 #include <memory>
 
 void LogLastEGLError();
-
-class TizenNativeWindow;
-
-class TizenNativeEGLWindow {
- public:
-  TizenNativeEGLWindow(TizenNativeWindow* tizen_native_window, int32_t w,
-                       int32_t h);
-  ~TizenNativeEGLWindow();
-  bool IsValid() {
-    return egl_window_ != nullptr && egl_display_ != EGL_NO_DISPLAY;
-  };
-
-  Ecore_Wl2_Egl_Window* GetEglWindowHandle() { return egl_window_; };
-  EGLDisplay GetEGLDisplayHandle() { return egl_display_; }
-  void ResizeWithRotation(int32_t dx, int32_t dy, int32_t width, int32_t height,
-                          int32_t degree);
-
- private:
-  Ecore_Wl2_Egl_Window* egl_window_ = nullptr;
-  EGLDisplay egl_display_ = EGL_NO_DISPLAY;
-};
 
 class TizenNativeWindow {
  public:
@@ -42,15 +24,17 @@ class TizenNativeWindow {
   TizenNativeWindow(int32_t x, int32_t y, int32_t w, int32_t h);
   ~TizenNativeWindow();
   bool IsValid() { return is_valid_; }
-  Ecore_Wl2_Window* GetWindowHandle() { return wl2_window_; }
-  std::shared_ptr<TizenNativeEGLWindow> GetTizenNativeEGLWindow() {
-    return tizen_native_egl_window_;
-  };
+  Evas_Object* GetWindowHandle() { return evas_window_; }
+  Evas_GL* GetEvasGLHandle() { return evas_gl_; }
+  Evas_GL_API* GetEvasGLApiHandle() { return evas_glGlapi; }
   TizenNativeWindowGeometry GetGeometry();
+  void ResizeWithRotation(int32_t dx, int32_t dy, int32_t width, int32_t height,
+                          int32_t degree);
 
  private:
-  std::shared_ptr<TizenNativeEGLWindow> tizen_native_egl_window_;
-  Ecore_Wl2_Window* wl2_window_{nullptr};
+  Evas_Object* evas_window_{nullptr};
+  Evas_GL* evas_gl_{nullptr};
+  Evas_GL_API* evas_glGlapi{nullptr};;
   bool is_valid_{false};
 };
 

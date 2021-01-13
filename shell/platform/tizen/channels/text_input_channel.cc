@@ -113,8 +113,7 @@ void TextInputChannel::InputPanelStateChangedCallback(
               int32_t surface_h =
                   window_geometry.h - self->current_keyboard_geometry_.h;
 
-              self->engine_->tizen_native_window->GetTizenNativeEGLWindow()
-                  ->ResizeWithRotation(0, 0, surface_w, surface_h, 0);
+              self->engine_->tizen_native_window->ResizeWithRotation(0, 0, surface_w, surface_h, 0);
               if (self->rotation == 90 || self->rotation == 270) {
                 self->engine_->SendWindowMetrics(surface_h, surface_w, 0);
               } else {
@@ -298,10 +297,10 @@ TextInputChannel::TextInputChannel(flutter::BinaryMessenger* messenger,
     imf_context_ = ecore_imf_context_add(GetImfMethod());
   }
   if (imf_context_) {
-    Ecore_Wl2_Window* ecoreWindow =
-        engine_->tizen_native_window->GetWindowHandle();
-    ecore_imf_context_client_window_set(
-        imf_context_, (void*)ecore_wl2_window_id_get(ecoreWindow));
+    // Ecore_Wl2_Window* ecoreWindow =
+    //     engine_->tizen_native_window->GetWindowHandle();
+    // ecore_imf_context_client_window_set(
+    //     imf_context_, (void*)ecore_wl2_window_id_get(ecoreWindow));
     RegisterIMFCallback();
   } else {
     FT_LOGE("Failed to create imfContext");
@@ -619,7 +618,7 @@ void TextInputChannel::HideSoftwareKeyboard() {
       } else {
         engine_->SendWindowMetrics(window_geometry.w, window_geometry.h, 0);
       }
-      engine_->tizen_native_window->GetTizenNativeEGLWindow()
+      engine_->tizen_native_window
           ->ResizeWithRotation(0, 0, window_geometry.w, window_geometry.h, 0);
       ecore_timer_add(
           0.05,

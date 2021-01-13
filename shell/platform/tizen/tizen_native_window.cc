@@ -7,168 +7,102 @@
 
 #include "tizen_native_window.h"
 
+#include <Elementary.h>
 #include "flutter/shell/platform/tizen/tizen_log.h"
 
-void LogLastEGLError() {
-  struct EGLNameErrorPair {
-    const char* name;
-    EGLint code;
-  };
+static Evas_GL* kEvasGl = nullptr;
+static Evas_GL_API* kEvasGLApi = nullptr;
 
-#define _EGL_ERROR_DESC(a) \
-  { #a, a }
+void LogLastEGLError() {}
 
-  const EGLNameErrorPair pairs[] = {
-      _EGL_ERROR_DESC(EGL_SUCCESS),
-      _EGL_ERROR_DESC(EGL_NOT_INITIALIZED),
-      _EGL_ERROR_DESC(EGL_BAD_ACCESS),
-      _EGL_ERROR_DESC(EGL_BAD_ALLOC),
-      _EGL_ERROR_DESC(EGL_BAD_ATTRIBUTE),
-      _EGL_ERROR_DESC(EGL_BAD_CONTEXT),
-      _EGL_ERROR_DESC(EGL_BAD_CONFIG),
-      _EGL_ERROR_DESC(EGL_BAD_CURRENT_SURFACE),
-      _EGL_ERROR_DESC(EGL_BAD_DISPLAY),
-      _EGL_ERROR_DESC(EGL_BAD_SURFACE),
-      _EGL_ERROR_DESC(EGL_BAD_MATCH),
-      _EGL_ERROR_DESC(EGL_BAD_PARAMETER),
-      _EGL_ERROR_DESC(EGL_BAD_NATIVE_PIXMAP),
-      _EGL_ERROR_DESC(EGL_BAD_NATIVE_WINDOW),
-      _EGL_ERROR_DESC(EGL_CONTEXT_LOST),
-  };
+void TizenNativeWindow::ResizeWithRotation(int32_t dx, int32_t dy,
+                                           int32_t width, int32_t height,
+                                           int32_t degree) {
+  evas_object_resize(evas_window_, width, height);
+  // needs to rotation.
 
-#undef _EGL_ERROR_DESC
-
-  const auto count = sizeof(pairs) / sizeof(EGLNameErrorPair);
-
-  EGLint last_error = eglGetError();
-
-  for (size_t i = 0; i < count; i++) {
-    if (last_error == pairs[i].code) {
-      FT_LOGE("EGL Error: %s (%d)", pairs[i].name, pairs[i].code);
-      return;
-    }
-  }
-
-  FT_LOGE("Unknown EGL Error");
-}
-
-class TizenWl2Display {
- public:
-  TizenWl2Display() {
-    if (!ecore_wl2_init()) {
-      FT_LOGE("Could not initialize ecore_wl2");
-      return;
-    }
-    // ecore_wl2 DISPLAY
-    wl2_display_ = ecore_wl2_display_connect(nullptr);
-    if (wl2_display_ == nullptr) {
-      FT_LOGE("Display not found");
-      return;
-    }
-    ecore_wl2_sync();
-  }
-
-  ~TizenWl2Display() {
-    if (wl2_display_) {
-      ecore_wl2_display_disconnect(wl2_display_);
-      wl2_display_ = nullptr;
-    }
-    ecore_wl2_shutdown();
-  }
-  Ecore_Wl2_Display* GetHandle() { return wl2_display_; }
-
- private:
-  Ecore_Wl2_Display* wl2_display_{nullptr};
-};
-TizenWl2Display g_tizen_wl2_display;
-
-TizenNativeEGLWindow::TizenNativeEGLWindow(
-    TizenNativeWindow* tizen_native_window, int32_t w, int32_t h) {
-  egl_window_ =
-      ecore_wl2_egl_window_create(tizen_native_window->GetWindowHandle(), w, h);
-
-  egl_display_ = eglGetDisplay((EGLNativeDisplayType)ecore_wl2_display_get(
-      g_tizen_wl2_display.GetHandle()));
-  if (egl_display_ == EGL_NO_DISPLAY) {
-    FT_LOGE("Could not access EGL display");
-    LogLastEGLError();
-    return;
-  }
-
-  EGLint major_version;
-  EGLint minor_version;
-  if (eglInitialize(egl_display_, &major_version, &minor_version) != EGL_TRUE) {
-    FT_LOGE("Could not initialize EGL display");
-    LogLastEGLError();
-    return;
-  }
-
-  FT_LOGD("eglInitialized: %d.%d", major_version, minor_version);
-
-  if (eglBindAPI(EGL_OPENGL_ES_API) != EGL_TRUE) {
-    FT_LOGE("Could not bind API");
-    LogLastEGLError();
-    return;
-  }
-}
-
-TizenNativeEGLWindow::~TizenNativeEGLWindow() {
-  if (egl_display_ != EGL_NO_DISPLAY) {
-    if (eglTerminate(egl_display_) != EGL_TRUE) {
-      FT_LOGE("Failed to terminate egl display");
-      LogLastEGLError();
-    }
-    egl_display_ = EGL_NO_DISPLAY;
-  }
-
-  if (egl_window_ != nullptr) {
-    ecore_wl2_egl_window_destroy(egl_window_);
-    egl_window_ = nullptr;
-  }
-}
-
-void TizenNativeEGLWindow::ResizeWithRotation(int32_t dx, int32_t dy,
-                                              int32_t width, int32_t height,
-                                              int32_t degree) {
-  ecore_wl2_egl_window_resize_with_rotation(egl_window_, dx, dy, width, height,
-                                            degree);
 }
 
 TizenNativeWindow::TizenNativeWindow(int32_t x, int32_t y, int32_t w,
                                      int32_t h) {
-  if (g_tizen_wl2_display.GetHandle() == nullptr) {
-    FT_LOGE("Faild to get display handle");
-    return;
-  }
   if (w == 0 || h == 0) {
     FT_LOGE("Failed to create because of the wrong size");
     return;
   }
+  elm_config_accel_preference_set("opengl");
 
-  wl2_window_ = ecore_wl2_window_new(g_tizen_wl2_display.GetHandle(), nullptr,
-                                     x, y, w, h);
+  evas_window_ = elm_win_add(NULL, NULL, ELM_WIN_BASIC);
+  elm_win_alpha_set(evas_window_, EINA_FALSE);
+  elm_win_aux_hint_add(evas_window_, "wm.policy.win.user.geometry", "1");
+  evas_object_move(evas_window_, x, y);
+  evas_object_resize(evas_window_, w, h);
+  evas_object_raise(evas_window_);
 
-  ecore_wl2_window_type_set(wl2_window_, ECORE_WL2_WINDOW_TYPE_TOPLEVEL);
-  ecore_wl2_window_alpha_set(wl2_window_, EINA_FALSE);
-  ecore_wl2_window_aux_hint_add(wl2_window_, 0, "wm.policy.win.user.geometry",
-                                "1");
-  ecore_wl2_window_show(wl2_window_);
+  gl_config_ = evas_gl_config_new();
+  gl_config_->color_format = EVAS_GL_RGBA_8888;
+  gl_config_->depth_bits = EVAS_GL_DEPTH_BIT_24;
+  gl_config_->stencil_bits = EVAS_GL_STENCIL_NONE;
+  gl_config_->options_bits = EVAS_GL_OPTIONS_NONE;
 
-  tizen_native_egl_window_ = std::make_shared<TizenNativeEGLWindow>(this, w, h);
+#define EVAS_GL_OPTIONS_DIRECT_MEMORY_OPTIMIZE (1 << 12)
+#define EVAS_GL_OPTIONS_DIRECT_OVERRIDE (1 << 13)
+  // gl_config_->options_bits = (Evas_GL_Options_Bits)(
+  //     EVAS_GL_OPTIONS_DIRECT | EVAS_GL_OPTIONS_DIRECT_OVERRIDE |
+  //     EVAS_GL_OPTIONS_DIRECT_MEMORY_OPTIMIZE |
+  //     EVAS_GL_OPTIONS_CLIENT_SIDE_ROTATION);
+
+  if (!gl_config_) {
+    FT_LOGE("Failed to ChooseGLConfiguration");
+    return;
+  }
+
+  evas_gl_ = evas_gl_new(evas_object_evas_get(evas_window_));
+  evas_glGlapi = evas_gl_api_get(evas_gl_);
+
+  kEvasGl = evas_gl_;
+  kEvasGLApi = evas_glGlapi;
+
+  Evas_Object* bg = elm_bg_add(evas_window_);
+  evas_object_color_set(bg, 0x00, 0x00, 0x00, 0x00);
+
+  evas_object_size_hint_weight_set(bg, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+  elm_win_resize_object_add(evas_window_, bg);
+
+  graphicsAdapter_ =
+      evas_object_image_filled_add(evas_object_evas_get(evas_window_));
+  evas_object_resize(graphicsAdapter_, w, h);
+  evas_object_move(graphicsAdapter_, x, y);
+  evas_object_image_size_set(graphicsAdapter_, w, h);
+  evas_object_image_alpha_set(graphicsAdapter_, EINA_TRUE);
+  elm_win_resize_object_add(evas_window_, graphicsAdapter_);
+
+  evas_object_show(evas_window_);
   is_valid_ = true;
+  {
+    #include <pthread.h>
+    pthread_t id;
+    id = pthread_self();
+    FT_LOGE("[MONG] TizenNativeWindow Thread ID %u",(int)id);
+  }
+
 }
 
 TizenNativeWindow::~TizenNativeWindow() {
-  tizen_native_egl_window_ = nullptr;
-  if (wl2_window_) {
-    ecore_wl2_window_free(wl2_window_);
-    wl2_window_ = nullptr;
+  if (evas_window_) {
+    evas_object_del(evas_window_);
+    evas_gl_config_free(gl_config_);
+    evas_gl_free(evas_gl_);
+
+    evas_window_ = nullptr;
+    evas_gl_ = nullptr;
+    evas_glGlapi = nullptr;
+    gl_config_ = nullptr;
   }
 }
 
 TizenNativeWindow::TizenNativeWindowGeometry TizenNativeWindow::GetGeometry() {
   TizenNativeWindowGeometry result;
-  ecore_wl2_window_geometry_get(wl2_window_, &result.x, &result.y, &result.w,
-                                &result.h);
+  evas_object_geometry_get(evas_window_, &result.x, &result.y, &result.w,
+                           &result.h);
   return result;
 }

@@ -4,16 +4,20 @@
 
 #include "external_texture_gl.h"
 
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <GLES3/gl32.h>
+// #include <EGL/egl.h>
+// #include <EGL/eglext.h>
+// #include <GLES2/gl2.h>
+// #include <GLES2/gl2ext.h>
+// #include <GLES3/gl32.h>
 
 #include <atomic>
 #include <iostream>
 
+#include <Elementary.h>
 #include "flutter/shell/platform/tizen/tizen_log.h"
+
+extern Evas_GL* kEvasGl;
+extern Evas_GL_API* kEvasGLApi;
 
 struct ExternalTextureGLState {
   GLuint gl_texture;
@@ -73,7 +77,7 @@ bool ExternalTextureGL::PopulateTextureWithIdentifier(
     mutex_.unlock();
     return false;
   }
-
+  
   PFNEGLCREATEIMAGEKHRPROC n_eglCreateImageKHR =
       (PFNEGLCREATEIMAGEKHRPROC)eglGetProcAddress("eglCreateImageKHR");
   const EGLint attrs[] = {EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE,

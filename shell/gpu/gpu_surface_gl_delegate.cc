@@ -45,6 +45,13 @@ static bool IsProcResolverOpenGLES(
 
   const char* gl_version_string = gl_get_string(GPU_GL_VERSION);
 
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+  fprintf(fp_mong,"[MONG] IsProcResolverOpenGLES : gl_version_string %s---> \n",gl_version_string);
+  fclose(fp_mong);
+}
+
   FML_CHECK(gl_version_string)
       << "The GL proc resolver's glGetString(GL_VERSION) failed";
 
@@ -74,10 +81,35 @@ static sk_sp<const GrGLInterface> CreateGLInterface(
         proc_resolver_context->resolver(gl_proc_name));
   };
 
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] gpu_surface_gl_delegate CreateGLInterface 1 ---> \n");
+  fclose(fp_mong);
+}
+
+
   // glGetString indicates an OpenGL ES interface.
   if (IsProcResolverOpenGLES(proc_resolver)) {
+
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] gpu_surface_gl_delegate CreateGLInterface 2 ---> \n");
+  fclose(fp_mong);
+}
+
     return GrGLMakeAssembledGLESInterface(&context, gl_get_proc);
   }
+
+
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] gpu_surface_gl_delegate CreateGLInterface 3 ---> \n");
+  fclose(fp_mong);
+}
+
 
   // Fallback to OpenGL.
   if (auto interface = GrGLMakeAssembledGLInterface(&context, gl_get_proc)) {

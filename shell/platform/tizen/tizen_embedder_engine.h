@@ -25,7 +25,6 @@
 #include "flutter/shell/platform/tizen/tizen_event_loop.h"
 #include "flutter/shell/platform/tizen/tizen_surface.h"
 #include "flutter/shell/platform/tizen/tizen_surface_gl.h"
-#include "flutter/shell/platform/tizen/tizen_vsync_waiter.h"
 #include "flutter/shell/platform/tizen/touch_event_handler.h"
 
 // State associated with the plugin registrar.
@@ -145,9 +144,6 @@ class TizenEmbedderEngine {
 
   // The event loop for the main thread that allows for delayed task execution.
   std::unique_ptr<TizenEventLoop> event_loop_;
-
-  // The vsync waiter for the embedder.
-  std::unique_ptr<TizenVsyncWaiter> tizen_vsync_waiter_;
 
   // AOT data for this engine instance, if applicable.
   UniqueAotDataPtr aot_data_;

@@ -15,6 +15,7 @@
 #include "third_party/skia/include/gpu/GrBackendSurface.h"
 #include "third_party/skia/include/gpu/GrContextOptions.h"
 
+
 // These are common defines present on all OpenGL headers. However, we don't
 // want to perform GL header reasolution on each platform we support. So just
 // define these upfront. It is unlikely we will need more. But, if we do, we can
@@ -65,7 +66,13 @@ GPUSurfaceGL::GPUSurfaceGL(GPUSurfaceGLDelegate* delegate,
   // TODO(goderbauer): remove option when skbug.com/7523 is fixed.
   // A similar work-around is also used in shell/common/io_manager.cc.
   options.fDisableGpuYUVConversion = true;
-
+  
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+  fprintf(fp_mong,"[MONG] point 1 ---> \n");
+  fclose(fp_mong);
+}
   auto context = GrDirectContext::MakeGL(delegate_->GetGLInterface(), options);
 
   if (context == nullptr) {

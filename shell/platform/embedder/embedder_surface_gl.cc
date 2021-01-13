@@ -93,6 +93,13 @@ std::unique_ptr<Surface> EmbedderSurfaceGL::CreateGPUSurface() {
 sk_sp<GrDirectContext> EmbedderSurfaceGL::CreateResourceContext() const {
   auto callback = gl_dispatch_table_.gl_make_resource_current_callback;
   if (callback && callback()) {
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] EmbedderSurfaceGL::CreateResourceContext  ---> point 1\n");
+  fclose(fp_mong);
+}
+
     if (auto context = ShellIOManager::CreateCompatibleResourceLoadingContext(
             GrBackend::kOpenGL_GrBackend, GetGLInterface())) {
       return context;

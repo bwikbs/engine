@@ -18,6 +18,14 @@ sk_sp<GrDirectContext> ShellIOManager::CreateCompatibleResourceLoadingContext(
     return nullptr;
   }
 
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] ShellIOManager::CreateCompatibleResourceLoadingContext  ---> point 1\n");
+  fclose(fp_mong);
+}
+
+
   GrContextOptions options = {};
 
   if (PersistentCache::cache_sksl()) {
@@ -41,12 +49,27 @@ sk_sp<GrDirectContext> ShellIOManager::CreateCompatibleResourceLoadingContext(
 
 #if !OS_FUCHSIA
   if (auto context = GrDirectContext::MakeGL(gl_interface, options)) {
+
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] ShellIOManager::CreateCompatibleResourceLoadingContext  ---> point 2\n");
+  fclose(fp_mong);
+}
+
     // Do not cache textures created by the image decoder.  These textures
     // should be deleted when they are no longer referenced by an SkImage.
     context->setResourceCacheLimits(0, 0);
     return context;
   }
 #endif
+
+{
+  #include<stdio.h>
+  FILE* fp_mong = fopen("/tmp/mong_log","a+");
+    fprintf(fp_mong,"[MONG] ShellIOManager::CreateCompatibleResourceLoadingContext  ---> point 3\n");
+  fclose(fp_mong);
+}
 
   return nullptr;
 }

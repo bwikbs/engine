@@ -19,37 +19,29 @@
 #include "flutter/shell/platform/tizen/tizen_native_window.h"
 #include "flutter/shell/platform/tizen/tizen_surface.h"
 
-class TizenEGLSurface {
+class TizenGLSurface {
  public:
-  TizenEGLSurface(std::shared_ptr<TizenNativeEGLWindow> tizen_native_egl_window,
-                  EGLSurface egl_surface)
-      : tizen_native_egl_window_(tizen_native_egl_window),
-        egl_surface_(egl_surface){};
-  ~TizenEGLSurface();
-  bool IsValid() { return egl_surface_ != EGL_NO_SURFACE; }
-  EGLSurface GetEGLSurfaceHandle() { return egl_surface_; };
+  TizenGLSurface(Evas_GL_Surface* gl_surface)
+      : gl_surface_(gl_surface){};
+  ~TizenGLSurface();
+  bool IsValid() { return gl_surface_ != nullptr; }
+  Evas_GL_Surface* GetGLSurfaceHandle() { return gl_surface_; };
 
  private:
-  std::shared_ptr<TizenNativeEGLWindow> tizen_native_egl_window_;
-  EGLSurface egl_surface_{EGL_NO_SURFACE};
+  // std::shared_ptr<TizenGLContext> gl_context_;
+  Evas_GL_Surface* gl_surface_{nullptr};
 };
 
-class TizenEGLContext {
+class TizenGLContext {
  public:
-  TizenEGLContext(
-      std::shared_ptr<TizenNativeEGLWindow> tizen_native_egl_window);
-  ~TizenEGLContext();
+  TizenGLContext(std::shared_ptr<TizenNativeWindow> tizen_native_window);
+  ~TizenGLContext();
   bool IsValid();
-  std::unique_ptr<TizenEGLSurface> CreateTizenEGLWindowSurface();
-  std::unique_ptr<TizenEGLSurface> CreateTizenEGLPbufferSurface();
-  EGLContext GetEGLContextHandle() { return egl_context_; }
-  EGLContext GetEGLResourceContextHandle() { return egl_resource_context_; }
+  Evas_GL_Context* GetGLContextHandle() { return gl_context_; }
 
  public:
-  std::shared_ptr<TizenNativeEGLWindow> tizen_native_egl_window_;
-  EGLConfig egl_config_{nullptr};
-  EGLContext egl_context_{EGL_NO_CONTEXT};
-  EGLContext egl_resource_context_{EGL_NO_CONTEXT};
+  std::shared_ptr<TizenNativeWindow> tizen_native_window_;
+  Evas_GL_Context* gl_context_;
 };
 
 class TizenSurfaceGL : public TizenSurface {
@@ -65,11 +57,16 @@ class TizenSurfaceGL : public TizenSurface {
   bool IsValid() override { return is_valid_; };
 
  private:
+  std::unique_ptr<TizenGLSurface> CreateTizenGLWindowSurface();
+  std::unique_ptr<TizenGLSurface> CreateTizenGLPbufferSurface();
   bool is_valid_{false};
   std::shared_ptr<TizenNativeWindow> tizen_native_window_;
-  std::unique_ptr<TizenEGLContext> tizen_context_gl_;
-  std::unique_ptr<TizenEGLSurface> tizen_egl_window_surface_;
-  std::unique_ptr<TizenEGLSurface> tizen_egl_pbuffer_surface_;
+  std::unique_ptr<TizenGLContext> tizen_context_gl_;
+  std::unique_ptr<TizenGLContext> tizen_context_gl_resource_;
+  std::unique_ptr<TizenGLSurface> tizen_gl_window_surface_;
+  std::unique_ptr<TizenGLSurface> tizen_gl_pbuffer_surface_;
+  void (*pixelDirtyCallback_)(void* data, Evas_Object* o);
+
 };
 
 #endif  // EMBEDDER_TIZEN_SURFACE_GL_H_

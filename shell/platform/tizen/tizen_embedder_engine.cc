@@ -55,8 +55,6 @@ TizenEmbedderEngine::TizenEmbedderEngine(
   messenger->engine = this;
   message_dispatcher =
       std::make_unique<flutter::IncomingMessageDispatcher>(messenger.get());
-
-  tizen_vsync_waiter_ = std::make_unique<TizenVsyncWaiter>(this);
 }
 
 TizenEmbedderEngine::~TizenEmbedderEngine() {
@@ -123,6 +121,7 @@ bool TizenEmbedderEngine::RunEngine(
   FlutterCustomTaskRunners custom_task_runners = {};
   custom_task_runners.struct_size = sizeof(FlutterCustomTaskRunners);
   custom_task_runners.platform_task_runner = &platform_task_runner;
+  custom_task_runners.render_task_runner = &platform_task_runner;
 
   FlutterRendererConfig config = {};
   config.type = kOpenGL;
@@ -144,7 +143,6 @@ bool TizenEmbedderEngine::RunEngine(
   args.command_line_argv = &argv[0];
   args.platform_message_callback = OnFlutterPlatformMessage;
   args.custom_task_runners = &custom_task_runners;
-  args.vsync_callback = OnVsyncCallback;
 
   if (FlutterEngineRunsAOTCompiledDartCode()) {
     aot_data_ = LoadAotData(engine_properties.aot_library_path);
@@ -326,16 +324,6 @@ void TizenEmbedderEngine::OnFlutterPlatformMessage(
   auto message =
       tizen_embedder_engine->ConvertToDesktopMessage(*engine_message);
   tizen_embedder_engine->message_dispatcher->HandleMessage(message);
-}
-
-void TizenEmbedderEngine::OnVsyncCallback(void* user_data, intptr_t baton) {
-  TizenEmbedderEngine* tizen_embedder_engine =
-      reinterpret_cast<TizenEmbedderEngine*>(user_data);
-  if (tizen_embedder_engine->tizen_vsync_waiter_->IsValid()) {
-    tizen_embedder_engine->tizen_vsync_waiter_->AsyncWaitForVsync(baton);
-    return;
-  }
-  FT_ASSERT_NOT_REACHED();
 }
 
 // Converts a FlutterPlatformMessage to an equivalent FlutterDesktopMessage.

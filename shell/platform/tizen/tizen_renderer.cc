@@ -529,6 +529,16 @@ uint32_t TizenRenderer::OnGetFBO() {
   return 0;
 }
 
+// There was a problem with gles support in a device that supports open gl
+// es 3.1, so it is forcibly used with 2.1
+const unsigned char gles_str[14] = "OpenGL ES 2.1";
+const GLubyte* CustomGlGetString(GLenum name) {
+  if (name == GL_VERSION) {
+    return gles_str;
+  }
+  return glGetString(name);
+}
+
 #define GL_FUNC(FunctionName)                     \
   else if (strcmp(name, #FunctionName) == 0) {    \
     return reinterpret_cast<void*>(FunctionName); \
@@ -595,7 +605,7 @@ void* TizenRenderer::OnProcResolver(const char* name) {
   GL_FUNC(glGetShaderInfoLog)
   GL_FUNC(glGetShaderiv)
   GL_FUNC(glGetShaderPrecisionFormat)
-  GL_FUNC(glGetString)
+  // GL_FUNC(glGetString)
   GL_FUNC(glGetUniformLocation)
   GL_FUNC(glIsTexture)
   GL_FUNC(glLineWidth)
@@ -644,6 +654,9 @@ void* TizenRenderer::OnProcResolver(const char* name) {
   GL_FUNC(glVertexAttribPointer)
   GL_FUNC(glViewport)
   GL_FUNC(glGetStringi)
+  else if (strcmp(name, "glGetString") == 0) {
+    return reinterpret_cast<void*>(CustomGlGetString);
+  }
   FT_LOGD("Could not resolve: %s", name);
   return nullptr;
 }

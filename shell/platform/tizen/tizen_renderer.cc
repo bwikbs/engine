@@ -10,6 +10,7 @@
 #else
 #include <Evas_GL_GLES3_Helpers.h>
 Evas_GL* g_evas_gl = nullptr;
+EvasGLSync g_glSync = nullptr;
 EVAS_GL_GLOBAL_GLES3_DEFINE();
 #endif
 
@@ -481,6 +482,16 @@ bool TizenRenderer::OnMakeCurrent() {
   if (evas_gl_make_current(evas_gl_, gl_surface_, gl_context_) != EINA_TRUE) {
     return false;
   }
+  {
+    if (g_glSync) {
+      evasglClientWaitSync(evas_gl_, g_glSync,
+                           EVAS_GL_SYNC_PRIOR_COMMANDS_COMPLETE,
+                           EVAS_GL_FOREVER);
+      evasglDestroySync(evas_gl_, g_glSync);
+      g_glSync = nullptr;
+    }
+  }
+
   return true;
 }
 
@@ -517,6 +528,10 @@ bool TizenRenderer::OnPresent() {
     received_rotation = false;
   }
   evas_object_image_pixels_dirty_set((Evas_Object*)GetImageHandle(), EINA_TRUE);
+  {
+    int attr[] = {EVAS_GL_NONE};
+    g_glSync = evasglCreateSync(evas_gl_, EVAS_GL_SYNC_FENCE, attr);
+  }
   return true;
 }
 
@@ -687,7 +702,6 @@ bool TizenRenderer::SetupEvasGL(int32_t x, int32_t y, int32_t w, int32_t h) {
   }
 
   g_evas_gl = evas_gl_;
-
   gl_config_ = evas_gl_config_new();
   gl_config_->color_format = EVAS_GL_RGBA_8888;
   gl_config_->depth_bits = EVAS_GL_DEPTH_NONE;

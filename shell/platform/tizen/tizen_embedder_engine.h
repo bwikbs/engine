@@ -155,6 +155,7 @@ class TizenEmbedderEngine : public TizenRenderer::Delegate {
 
   // The event loop for the main thread that allows for delayed task execution.
   std::unique_ptr<TizenEventLoop> event_loop_;
+  std::unique_ptr<TizenEventLoop> render_loop_;
 
   // The vsync waiter for the embedder.
   std::unique_ptr<TizenVsyncWaiter> tizen_vsync_waiter_;

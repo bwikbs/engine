@@ -240,9 +240,12 @@ bool EmbedderEngine::RunTask(const FlutterTask* task) {
   // The shell doesn't need to be running or valid for access to the thread
   // host. This is why there is no `IsValid` check here. This allows embedders
   // to perform custom task runner interop before the shell is running.
+  printf("[MONG] POINT 1\n");
   if (task == nullptr) {
+    printf("[MONG] POINT 2\n");
     return false;
   }
+  printf("[MONG] task->runner %lld\n",reinterpret_cast<int64_t>(task->runner));
   return thread_host_->PostTask(reinterpret_cast<int64_t>(task->runner),
                                 task->task);
 }

@@ -475,6 +475,8 @@ void TizenRenderer::ClearColor(float r, float g, float b, float a) {
 }
 
 bool TizenRenderer::OnMakeCurrent() {
+  FT_LOGE("[MONG] OnMakeCurrent --->");
+
   if (!IsValid()) {
     FT_LOGE("Invalid TizenRenderer");
     return false;
@@ -519,6 +521,7 @@ bool TizenRenderer::OnMakeResourceCurrent() {
 }
 
 bool TizenRenderer::OnPresent() {
+  FT_LOGE("[MONG] OnPresent --->");
   if (!is_valid_) {
     FT_LOGE("Invalid TizenRenderer");
     return false;
@@ -527,7 +530,7 @@ bool TizenRenderer::OnPresent() {
     SendRotationChangeDone();
     received_rotation = false;
   }
-  evas_object_image_pixels_dirty_set((Evas_Object*)GetImageHandle(), EINA_TRUE);
+  // evas_object_image_pixels_dirty_set((Evas_Object*)GetImageHandle(), EINA_TRUE);
   {
     int attr[] = {EVAS_GL_NONE};
     g_glSync = evasglCreateSync(evas_gl_, EVAS_GL_SYNC_FENCE, attr);
@@ -1031,10 +1034,10 @@ bool TizenRenderer::SetupEvasGL(int32_t x, int32_t y, int32_t w, int32_t h) {
 
 #define EVAS_GL_OPTIONS_DIRECT_MEMORY_OPTIMIZE (1 << 12)
 #define EVAS_GL_OPTIONS_DIRECT_OVERRIDE (1 << 13)
-  // gl_config_->options_bits = (Evas_GL_Options_Bits)(
-  //     EVAS_GL_OPTIONS_DIRECT | EVAS_GL_OPTIONS_DIRECT_OVERRIDE |
-  //     EVAS_GL_OPTIONS_DIRECT_MEMORY_OPTIMIZE |
-  //     EVAS_GL_OPTIONS_CLIENT_SIDE_ROTATION);
+  gl_config_->options_bits = (Evas_GL_Options_Bits)(
+      EVAS_GL_OPTIONS_DIRECT | EVAS_GL_OPTIONS_DIRECT_OVERRIDE |
+      EVAS_GL_OPTIONS_DIRECT_MEMORY_OPTIMIZE |
+      EVAS_GL_OPTIONS_CLIENT_SIDE_ROTATION);
 
   gl_context_ =
       evas_gl_context_version_create(evas_gl_, NULL, EVAS_GL_GLES_3_X);
@@ -1064,12 +1067,12 @@ bool TizenRenderer::SetupEvasGL(int32_t x, int32_t y, int32_t w, int32_t h) {
   Evas_Native_Surface ns;
   evas_gl_native_surface_get(evas_gl_, gl_surface_, &ns);
   evas_object_image_native_surface_set((Evas_Object*)GetImageHandle(), &ns);
-  pixelDirtyCallback_ = [](void* data, Evas_Object* o) {
-    TizenRenderer* renderer = (TizenRenderer*)data;
-    renderer->flush();
-  };
-  evas_object_image_pixels_get_callback_set((Evas_Object*)GetImageHandle(),
-                                            pixelDirtyCallback_, this);
+  // pixelDirtyCallback_ = [](void* data, Evas_Object* o) {
+  //   TizenRenderer* renderer = (TizenRenderer*)data;
+  //   renderer->flush();
+  // };
+  // evas_object_image_pixels_get_callback_set((Evas_Object*)GetImageHandle(),
+  //                                           pixelDirtyCallback_, this);
   return true;
 }
 
@@ -1087,6 +1090,45 @@ void TizenRenderer::DestoryEvasGL() {
 
   evas_gl_config_free(gl_config_);
   evas_gl_free(evas_gl_);
+}
+
+void TizenRenderer::RegisterRenderingCB(RenderingCallback renderingCB)
+{
+  FT_LOGE("[MONG] RegisterRenderingCB --->");
+
+  rendering_cb_ = renderingCB;
+  pixelDirtyCallback_ = [](void* data, Evas_Object* o) {
+
+    FT_LOGE("[MONG] pixelDirtyCallback_ --->");
+
+    TizenRenderer* renderer = (TizenRenderer*)data;
+    renderer->DoRendering();
+    renderer->flush();
+  };
+  evas_object_image_pixels_get_callback_set((Evas_Object*)GetImageHandle(),
+                                            pixelDirtyCallback_, this);
+}
+
+void TizenRenderer::PostRendering(FLUTTER_API_SYMBOL(FlutterEngine) engine, const FlutterTask* task)
+{
+  FT_LOGE("[MONG] PostRendering --->%lld\n",reinterpret_cast<int64_t>(task->runner));
+
+  flutter_engine_ = engine;
+  flutter_tasks_.push_back(*task);
+  evas_object_image_pixels_dirty_set((Evas_Object*)GetImageHandle(), EINA_TRUE);
+}
+
+void TizenRenderer::DoRendering()
+{
+  FT_LOGE("[MONG] DoRendering --->\n");
+  // need lock?
+  if(rendering_cb_ && flutter_engine_){
+     for (auto iter = flutter_tasks_.begin(); iter != flutter_tasks_.end(); ++iter){
+       FT_LOGE("[MONG] DoRendering --->2 : %lld\n",reinterpret_cast<int64_t>(((FlutterTask)(*iter)).runner));
+       rendering_cb_(flutter_engine_,&(*iter));
+    }
+  }
+  flutter_tasks_.clear();
 }
 
 #endif

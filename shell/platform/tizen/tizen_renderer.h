@@ -13,7 +13,12 @@
 #include <EGL/egl.h>
 #endif
 
+#include <functional>
+#include <vector>
+#include "flutter/shell/platform/embedder/embedder.h"
+
 class TizenRenderer {
+ using RenderingCallback = std::function<void(FLUTTER_API_SYMBOL(FlutterEngine), const FlutterTask*)>;
  public:
   struct TizenWindowGeometry {
     int32_t x{0}, y{0}, w{0}, h{0};
@@ -44,6 +49,9 @@ class TizenRenderer {
   virtual int GetEcoreWindowId() = 0;
   virtual void ResizeWithRotation(int32_t x, int32_t y, int32_t width,
                                   int32_t height, int32_t degree) = 0;
+  void RegisterRenderingCB(RenderingCallback renderingCB);
+  void PostRendering(FLUTTER_API_SYMBOL(FlutterEngine) engine, const FlutterTask* task);
+  void DoRendering();
 
  protected:
   bool received_rotation{false};
@@ -85,6 +93,9 @@ class TizenRenderer {
   Evas_GL_Surface* gl_surface_{nullptr};
   Evas_GL_Surface* gl_resource_surface_{nullptr};
   void (*pixelDirtyCallback_)(void* data, Evas_Object* o);
+  RenderingCallback rendering_cb_;
+  FLUTTER_API_SYMBOL(FlutterEngine) flutter_engine_;
+  std::vector<FlutterTask> flutter_tasks_;
 
   bool ChooseEGLConfiguration();
   void PrintEGLError();
